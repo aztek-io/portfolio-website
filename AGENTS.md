@@ -23,19 +23,6 @@ This is a SvelteKit 5 static portfolio site deployed to AWS S3 + CloudFront at `
 | `svelte.config.js` | Adapter config - outputs to `build/` |
 | `nginx.conf` | Local nginx config mimicking S3 behavior |
 
-## Build & Deploy
-
-```bash
-# Build
-npm run build
-
-# Deploy to S3
-aws s3 sync build/ s3://cdn.aztek.io --delete --acl public-read --profile aztek-org
-
-# Invalidate CloudFront cache
-aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" --profile aztek-org
-```
-
 ## Important Patterns
 
 ### Routing
@@ -51,6 +38,13 @@ aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" 
 ### Static Assets
 - Certificate PDFs go in `static/certs/` (copied to `build/certs/`)
 - Favicons and manifest in `static/`
+
+### Social Media Icons
+- Located in `src/lib/assets/` as `.svg` files
+- Icons use hardcoded fill color `#cbd5e1` matching `--color-footer-text-muted`
+- If brand colors change, update both:
+  - `--color-footer-text-muted` in `src/lib/styles/design-system.css`
+  - `fill` attribute in all `src/lib/assets/*.svg` icon files
 
 ## AWS Resources
 
@@ -73,6 +67,10 @@ aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" 
 
 ## Common Tasks
 
+**CRITICAL: Always build first, then sync `build/` directory - NEVER sync `static/` with `--delete`!**
+
+The build process copies files from `static/` into `build/` and generates all HTML/JS/CSS. Syncing `static/` to S3 would delete all the generated site content.
+
 ### Add a new page
 1. Create `src/routes/newpage/+page.svelte`
 2. Add `+page.ts` with `export const prerender = true`
@@ -85,8 +83,59 @@ Edit `src/lib/data/certs.ts` - keep sorted newest to oldest
 ### Fix routing issues
 Ensure `trailingSlash: 'always'` is set in `+layout.ts` and rebuild
 
+### Check for code smells with SonarQube
+Run a local SonarQube scan to check code quality before deploying:
+
+```bash
+# 1. Start SonarQube (first time only - skip if already running)
+docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
+
+# 2. Wait for SonarQube to be ready (~2 minutes first time)
+# Check status: curl http://localhost:9000/api/system/status
+
+# 3. Change default password (first time only)
+curl -u admin:admin -X POST "http://localhost:9000/api/users/change_password?login=admin&previousPassword=admin&password=newadmin123"
+
+# 4. Generate scanner token (first time only)
+curl -u admin:newadmin123 -X POST "http://localhost:9000/api/user_tokens/generate?name=scanner-token"
+# Save the token from response
+
+# 5. Create project (first time only)
+curl -u admin:newadmin123 -X POST "http://localhost:9000/api/projects/create?project=cdn-website&name=CDN+Website"
+
+# 6. Run analysis (use token from step 4)
+docker run --rm \
+  -e SONAR_HOST_URL="http://host.docker.internal:9000" \
+  -e SONAR_TOKEN="your-token-here" \
+  -v "$(pwd):/usr/src" \
+  sonarsource/sonar-scanner-cli \
+  -Dsonar.projectKey=cdn-website
+
+# 7. View results at http://localhost:9000/dashboard?id=cdn-website
+
+# 8. Stop SonarQube when done
+docker stop sonarqube && docker rm sonarqube
+```
+
+### Complete build and deployment workflow
+```bash
+# 1. Check for code smells (optional but recommended)
+# Follow steps above to run SonarQube scan
+
+# 2. Build the site
+npm run build
+
+# 3. Deploy to S3
+aws s3 sync build/ s3://cdn.aztek.io --delete --acl public-read --profile aztek-org
+
+# 4. Invalidate CloudFront cache
+aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" --profile aztek-org
+```
+
 ## Don't Do
 
+- **NEVER sync `static/` to S3 with `--delete`** - this will delete all generated HTML/JS/CSS and destroy the website
+- **ALWAYS sync `build/` directory** after running `npm run build`
 - Don't use `cat << EOF` heredocs in terminal - crashes the VS Code terminal
 - Don't forget to invalidate CloudFront after S3 deploy
 - Don't put files in `/tmp` - use workspace directory and clean up after

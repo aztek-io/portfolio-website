@@ -10,4 +10,10 @@ declare global {
 	}
 }
 
+// Vite special imports
+declare module '*.md?raw' {
+	const content: string;
+	export default content;
+}
+
 export {};

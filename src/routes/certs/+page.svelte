@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { certs } from '$lib/data/certs';
+  let { data } = $props();
 </script>
 
-<h1>Certifications</h1>
+<div class="markdown-content">
+  {@html data.content}
+</div>
+
 <div class="certs-grid grid-auto mt-lg">
-  {#each certs as cert}
+  {#each data.certs as cert}
     <div class="cert-card card">
       <div class="cert-header">
         <h3>{cert.title}</h3>
