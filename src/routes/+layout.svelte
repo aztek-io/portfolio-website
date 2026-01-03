@@ -12,7 +12,7 @@
   // Root layout: shared header/footer
   let { children } = $props();
 
-  let darkMode = $state(false);
+  let darkMode = $state(true);
   let mobileMenuOpen = $state(false);
 
   function toggleMobileMenu() {
@@ -51,25 +51,26 @@
     }
   }
 
-  function toggleDarkMode() {
-    darkMode = !darkMode;
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    // Store preference in localStorage
-    if (typeof localStorage !== 'undefined') {
+  // Reactive effect to update DOM when darkMode changes
+  $effect(() => {
+    if (browser) {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
       localStorage.setItem('darkMode', darkMode.toString());
     }
-  }
+  });
 
   // Initialize dark mode from localStorage on mount
   onMount(() => {
     const stored = localStorage.getItem('darkMode');
-    if (stored === 'true') {
+    if (stored === 'false') {
+      darkMode = false;
+    } else {
+      // Default to dark mode if no preference stored
       darkMode = true;
-      document.documentElement.classList.add('dark');
     }
 
     // Add event listeners for mobile menu
@@ -92,25 +93,18 @@
       </div>
 
       <div class="header-actions">
-        <button class="theme-toggle" onclick={toggleDarkMode} aria-label="Toggle dark mode">
-          {#if darkMode}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5"/>
-              <line x1="12" y1="1" x2="12" y2="3"/>
-              <line x1="12" y1="21" x2="12" y2="23"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-              <line x1="1" y1="12" x2="3" y2="12"/>
-              <line x1="21" y1="12" x2="23" y2="12"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-            </svg>
-          {:else}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-          {/if}
-        </button>
+        <label class="theme-toggle" for="theme-toggle-input">
+          <span class="theme-toggle__wrapper">
+            <input 
+              id="theme-toggle-input"
+              class="theme-toggle__input" 
+              type="checkbox" 
+              role="switch" 
+              bind:checked={darkMode}
+              aria-label="Toggle dark mode"
+            >
+          </span>
+        </label>
 
         <button
           class="mobile-menu-toggle"
@@ -185,11 +179,9 @@
   /* Layout-specific styles only */
   .site-header {
     background: var(--color-bg-primary);
-    border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
-    box-shadow: 0 1px 3px var(--color-shadow);
   }
 
   .site-header .container {
@@ -266,77 +258,35 @@
     text-decoration: none;
     font-weight: var(--font-weight-medium);
     font-size: var(--font-size-base);
-    padding: 0.875rem 1.5rem;
-    border-radius: var(--radius-lg);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0.5rem 0.25rem;
     position: relative;
-    overflow: hidden;
-    background: transparent;
-    border: 1px solid transparent;
-    isolation: isolate;
-  }
-
-  .nav a::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      135deg,
-      var(--color-primary) 0%,
-      var(--color-primary-light) 50%,
-      var(--color-primary) 100%
-    );
-    transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    z-index: -1;
-    border-radius: var(--radius-lg);
+    transition: color var(--transition-fast);
   }
 
   .nav a::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
     bottom: 0;
-    background: linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      rgba(255, 255, 255, 0.1) 100%
-    );
-    opacity: 0;
-    transition: all 0.3s ease;
-    transform: translateX(-100%) skewX(-15deg);
-    z-index: 1;
-    border-radius: var(--radius-lg);
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--color-primary);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--transition-normal);
   }
 
   .nav a:hover {
-    color: white;
-    transform: translateY(-4px) scale(1.02);
-    border-color: var(--color-primary);
-    box-shadow:
-      0 0 25px rgba(59, 130, 246, 0.4),
-      0 8px 25px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .nav a:hover::before {
-    left: 0;
+    color: var(--color-primary);
   }
 
   .nav a:hover::after {
-    opacity: 1;
-    transform: translateX(100%) skewX(-15deg);
-    transition: all 0.6s ease;
+    transform: scaleX(1);
+    transform-origin: left;
   }
 
   .nav a:active {
-    transform: translateY(-2px) scale(0.98);
-    transition: all 0.1s ease;
+    color: var(--color-primary-hover);
   }
 
   .content {
@@ -423,40 +373,81 @@
   .theme-toggle {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: transparent;
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
-    padding: 0.75rem;
-    border-radius: var(--radius-full);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .theme-toggle__wrapper {
+    position: relative;
+    margin: 0;
+  }
+
+  .theme-toggle__input {
+    position: relative;
+    display: block;
+    appearance: none;
+    -webkit-appearance: none;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border: 2px solid var(--color-border);
+    border-radius: 2rem;
+    padding: 0.25rem;
+    width: 5rem;
+    height: 2.5rem;
     cursor: pointer;
     transition: all var(--transition-normal);
-    width: 44px;
-    height: 44px;
-    position: relative;
-    overflow: hidden;
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.1),
+      inset 0 1px 2px rgba(255, 255, 255, 0.3);
   }
 
-  .theme-toggle::before {
+  .theme-toggle__input:before {
     content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: var(--color-primary);
-    transition: left var(--transition-normal);
-    z-index: -1;
+    top: 50%;
+    left: 0.125rem;
+    transform: translateY(-50%);
+    display: block;
+    background: #ffffff;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    transition: all var(--transition-normal);
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.2),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .theme-toggle:hover {
-    color: white;
-    transform: translateY(-2px);
+  .theme-toggle__input:hover {
+    border-color: var(--color-primary);
+    box-shadow: 
+      0 4px 12px rgba(59, 130, 246, 0.2),
+      inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+
+  .theme-toggle__input:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .theme-toggle__input:checked {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
     border-color: var(--color-primary);
   }
 
-  .theme-toggle:hover::before {
-    left: 0;
+  .theme-toggle__input:checked:before {
+    transform: translateX(2.5rem) translateY(-50%);
+    background: #e0f2fe;
+  }
+
+  @supports selector(:focus-visible) {
+    .theme-toggle__input:focus {
+      outline: none;
+    }
+
+    .theme-toggle__input:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
   }
 
   /* Mobile responsiveness */
@@ -518,22 +509,15 @@
       border-bottom: 1px solid var(--color-border-light);
       width: 100%;
       text-align: left;
-      border-radius: 0;
       font-size: var(--font-size-base);
-      min-height: 56px; /* Better touch targets */
+      min-height: 56px;
       display: flex;
       align-items: center;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       position: relative;
-      transform: translateX(0);
     }
 
     .nav a:last-child {
       border-bottom: none;
-    }
-
-    .nav a::before {
-      display: none;
     }
 
     .nav a::after {
@@ -543,35 +527,41 @@
       top: 0;
       bottom: 0;
       width: 4px;
+      height: 100%;
       background: var(--color-primary);
-      transform: scaleY(0);
-      transition: transform 0.3s ease;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--transition-normal);
     }
 
     .nav a:hover,
     .nav a:focus {
       background: var(--color-bg-secondary);
-      transform: none;
-      padding-left: calc(var(--spacing-xl) + var(--spacing-md));
       color: var(--color-primary);
-      box-shadow: none;
-      border-color: var(--color-primary-light);
     }
 
     .nav a:hover::after,
     .nav a:focus::after {
-      transform: scaleY(1);
+      transform: scaleX(1);
     }
 
     .nav a:active {
-      background: var(--color-bg-tertiary);
-      transform: none;
+      background: var(--color-bg-muted);
     }
 
-    .theme-toggle {
-      width: 44px;
-      height: 44px;
-      padding: var(--spacing-sm);
+    .theme-toggle__input {
+      width: 4.5rem;
+      height: 2.25rem;
+      padding: 0.2rem;
+    }
+
+    .theme-toggle__input:before {
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+
+    .theme-toggle__input:checked:before {
+      transform: translateX(2.25rem) translateY(-50%);
     }
 
     .content {
@@ -609,14 +599,19 @@
       font-size: var(--font-size-sm);
     }
 
-    .nav a:hover,
-    .nav a:focus {
-      padding-left: calc(var(--spacing-lg) + var(--spacing-sm));
+    .theme-toggle__input {
+      width: 4rem;
+      height: 2rem;
+      padding: 0.175rem;
     }
 
-    .theme-toggle {
-      width: 40px;
-      height: 40px;
+    .theme-toggle__input:before {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .theme-toggle__input:checked:before {
+      transform: translateX(2rem) translateY(-50%);
     }
   }
 
@@ -634,14 +629,19 @@
       font-size: var(--font-size-sm);
     }
 
-    .nav a:hover {
-      padding-left: calc(var(--spacing-lg) + var(--spacing-sm));
+    .theme-toggle__input {
+      width: 3.5rem;
+      height: 1.75rem;
+      padding: 0.15rem;
     }
 
-    .theme-toggle {
-      width: 36px;
-      height: 36px;
-      padding: var(--spacing-sm);
+    .theme-toggle__input:before {
+      width: 1.35rem;
+      height: 1.35rem;
+    }
+
+    .theme-toggle__input:checked:before {
+      transform: translateX(1.75rem) translateY(-50%);
     }
 
     .mobile-menu-toggle {

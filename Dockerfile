@@ -20,6 +20,16 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/build /usr/share/nginx/html
 
+# Create non-root user and set permissions
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup && \
+    chown -R appuser:appgroup /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx && \
+    touch /run/nginx.pid && \
+    chown appuser:appgroup /run/nginx.pid
+
+# Switch to non-root user
+USER appuser
+
 # Expose HTTP
 EXPOSE 80
 

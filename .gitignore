@@ -24,3 +24,5 @@ vite.config.ts.timestamp-*
 
 # Resume
 static/Resume.pdf
+Resume.md
+Screenshot*.png

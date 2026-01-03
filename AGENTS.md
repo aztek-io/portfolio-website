@@ -12,7 +12,7 @@ This is a SvelteKit 5 static portfolio site deployed to AWS S3 + CloudFront at `
 - **Styling**: Custom CSS (no framework) - see `src/lib/styles/design-system.css`
 - **Build**: Vite with `@sveltejs/adapter-static`
 - **Deployment**: S3 bucket `cdn.aztek.io` + CloudFront distribution `E6X0JGRX63W96`
-- **Local Dev**: Docker with nginx or `npm run dev`
+- **Local Dev**: `docker compose up --build -d` or `npm run dev`
 
 ## Key Files
 
@@ -75,13 +75,63 @@ The build process copies files from `static/` into `build/` and generates all HT
 1. Create `src/routes/newpage/+page.svelte`
 2. Add `+page.ts` with `export const prerender = true`
 3. Update nav in `src/routes/+layout.svelte`
-4. Build and deploy
+4. Test locally with `docker compose up --build -d`
+5. Build and deploy
 
 ### Update certifications
 Edit `src/lib/data/certs.ts` - keep sorted newest to oldest
 
 ### Fix routing issues
 Ensure `trailingSlash: 'always'` is set in `+layout.ts` and rebuild
+
+### Local testing
+```bash
+# Start the site locally (builds and runs nginx container on port 8080)
+docker compose up --build -d
+
+# View logs
+docker compose logs -f
+
+# Stop the site
+docker compose down
+```
+
+Visit http://localhost:8080 to test the site.
+
+## Security Requirements
+
+**MANDATORY: Security scans MUST be run after every Docker build and after implementing any new feature.**
+
+### Run security scans
+```bash
+# 1. Dependency audit (fix non-breaking vulnerabilities)
+npm audit
+npm audit fix
+
+# 2. Linting (ESLint) and type checking (svelte-check)
+npm run lint
+npm run check
+
+# 3. Dockerfile linting (hadolint)
+hadolint Dockerfile
+
+# 4. Trivy filesystem scan (vulnerabilities, secrets, misconfigurations)
+trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL .
+
+# 5. Build Docker image and scan it
+docker build -t cdn-website:latest .
+trivy image --severity HIGH,CRITICAL cdn-website:latest
+```
+
+**All HIGH/CRITICAL issues must be resolved before deployment.**
+**All linting errors and warnings must be resolved before committing.**
+
+### When to run security scans
+- **After every Docker build** - Always scan the image before deploying
+- **After implementing new features** - Run full security suite before committing
+- **Before production deployment** - Final security check as part of deployment workflow
+- **When updating dependencies** - Verify no new vulnerabilities introduced
+- **All linting warnings must be addressed** - Zero tolerance for code quality warnings
 
 ### Check for code smells with SonarQube
 Run a local SonarQube scan to check code quality before deploying:
@@ -119,17 +169,42 @@ docker stop sonarqube && docker rm sonarqube
 
 ### Complete build and deployment workflow
 ```bash
-# 1. Check for code smells (optional but recommended)
+# 0. Copy latest resume from source repo (MANDATORY before builds)
+cp -a ../../Documents/resume/Resume.pdf ./static/Resume.pdf
+
+# 1. Run security scans (MANDATORY)
+npm audit && npm audit fix
+npm run lint
+npm run check
+hadolint Dockerfile
+trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL .
+
+# 2. Check for code smells (optional but recommended)
 # Follow steps above to run SonarQube scan
 
-# 2. Build the site
+# 3. Build the site
 npm run build
 
-# 3. Deploy to S3
+# 4. Deploy to S3
 aws s3 sync build/ s3://cdn.aztek.io --delete --acl public-read --profile aztek-org
 
-# 4. Invalidate CloudFront cache
+# 5. Invalidate CloudFront cache
 aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" --profile aztek-org
+```
+
+### Docker build and deployment workflow
+```baLint Dockerfile (MANDATORY)
+hadolint Dockerfile
+
+# 2. Build Docker image
+docker build -t cdn-website:latest .
+
+# 3. Security scan image (MANDATORY)
+trivy image --severity HIGH,CRITICAL cdn-website:latest
+
+# 4
+# 3. Only proceed if scan shows 0 HIGH/CRITICAL vulnerabilities
+# Deploy container as needed
 ```
 
 ## Don't Do

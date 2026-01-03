@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  export let error: any;
+  export let error: { message?: string };
   export let status: number;
 
   onMount(() => {
@@ -9,12 +9,23 @@
     const canvas = document.getElementById('errorCanvas') as HTMLCanvasElement;
     if (canvas) {
         // Animation functions
-        const requestAnimFrame = (function(callback: FrameRequestCallback) {
+        const requestAnimFrame = (function() {
           return window.requestAnimationFrame ||
-                 (window as any).webkitRequestAnimationFrame ||
-                 (window as any).mozRequestAnimationFrame ||
-                 (window as any).oRequestAnimationFrame ||
-                 (window as any).msRequestAnimationFrame ||
+                 (window as Window & {
+                   webkitRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                   mozRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                   oRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                   msRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                 }).webkitRequestAnimationFrame ||
+                 (window as Window & {
+                   mozRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                 }).mozRequestAnimationFrame ||
+                 (window as Window & {
+                   oRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                 }).oRequestAnimationFrame ||
+                 (window as Window & {
+                   msRequestAnimationFrame?: typeof window.requestAnimationFrame;
+                 }).msRequestAnimationFrame ||
           function(callback: FrameRequestCallback) {
             window.setTimeout(callback, 1000 / 60);
           };

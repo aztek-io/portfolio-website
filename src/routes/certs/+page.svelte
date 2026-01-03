@@ -7,7 +7,7 @@
 </div>
 
 <div class="certs-grid grid-auto mt-lg">
-  {#each data.certs as cert}
+  {#each data.certs as cert (cert.title)}
     <div class="cert-card card">
       <div class="cert-header">
         <h3>{cert.title}</h3>
