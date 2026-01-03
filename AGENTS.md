@@ -2,6 +2,28 @@
 
 Instructions for AI agents working with this codebase.
 
+## Code Style Guidelines
+
+### Emoji
+- **Do not use emoji characters in scripts, source code, or test output**
+- Use proper logging libraries (Winston) with ANSI color codes for log levels
+- Emoji may be used sparingly in documentation (README, AGENTS.md) for visual clarity
+
+### Logging
+- Use Winston for structured logging with ANSI colors
+- Test output uses `tests/logger.ts` wrapper for consistent formatting
+- Log levels: `error` (red), `warn` (yellow), `info` (green), `debug` (blue)
+
+### Linting Exceptions
+- All linting warnings must be resolved before committing
+- If a linting issue cannot be fixed due to a valid functional reason, the human operator may approve ignoring it
+- Once approved by the human operator, AI agents should add the appropriate ignore comment with an explanation:
+  - **shellcheck**: `# shellcheck disable=SCXXXX # Reason for ignoring`
+  - **ESLint**: `// eslint-disable-next-line rule-name -- Reason for ignoring`
+  - **hadolint**: `# hadolint ignore=DLXXXX`
+  - **TypeScript**: `// @ts-expect-error Reason for ignoring`
+- Never add ignore comments without explicit human approval
+
 ## Project Overview
 
 This is a SvelteKit 5 static portfolio site deployed to AWS S3 + CloudFront at `cdn.aztek.io`. The apex domain `aztek.io` redirects here.
@@ -102,7 +124,7 @@ Visit http://localhost:8080 to test the site.
 
 **MANDATORY: Security scans MUST be run after every Docker build and after implementing any new feature.**
 
-### Run security scans
+### Run security and quality scans
 ```bash
 # 1. Dependency audit (fix non-breaking vulnerabilities)
 npm audit
@@ -112,60 +134,60 @@ npm audit fix
 npm run lint
 npm run check
 
-# 3. Dockerfile linting (hadolint)
+# 3. Shell script linting (shellcheck)
+find . -name "*.sh" | while read -r SCRIPT; do shellcheck "$SCRIPT"; done
+
+# 4. Run Selenium E2E tests (MANDATORY - requires local site running)
+docker compose up --build -d
+npm test
+docker compose down
+
+# 5. Dockerfile linting (hadolint)
 hadolint Dockerfile
 
-# 4. Trivy filesystem scan (vulnerabilities, secrets, misconfigurations)
+# 6. Trivy filesystem scan (vulnerabilities, secrets, misconfigurations)
 trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL .
 
-# 5. Build Docker image and scan it
+# 7. Build Docker image and scan it
 docker build -t cdn-website:latest .
 trivy image --severity HIGH,CRITICAL cdn-website:latest
+
+# 8. SonarQube code quality analysis (MANDATORY)
+bash scripts/sonarqube-scan.sh
 ```
 
 **All HIGH/CRITICAL issues must be resolved before deployment.**
 **All linting errors and warnings must be resolved before committing.**
 
-### When to run security scans
+### When to run security and quality scans
 - **After every Docker build** - Always scan the image before deploying
 - **After implementing new features** - Run full security suite before committing
 - **Before production deployment** - Final security check as part of deployment workflow
 - **When updating dependencies** - Verify no new vulnerabilities introduced
 - **All linting warnings must be addressed** - Zero tolerance for code quality warnings
+- **Shell scripts must pass shellcheck** - No warnings allowed in scripts/*.sh
+- **Selenium E2E tests must pass** - All 20 tests must pass before deployment
+- **SonarQube analysis required** - No new code smells, bugs, or vulnerabilities allowed
 
-### Check for code smells with SonarQube
-Run a local SonarQube scan to check code quality before deploying:
+### Check for code smells with SonarQube (MANDATORY)
+Run the SonarQube scan script to check code quality before deploying:
 
 ```bash
-# 1. Start SonarQube (first time only - skip if already running)
-docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
+# Run the automated SonarQube scan
+bash scripts/sonarqube-scan.sh
 
-# 2. Wait for SonarQube to be ready (~2 minutes first time)
-# Check status: curl http://localhost:9000/api/system/status
+# To stop SonarQube after the scan completes
+bash scripts/sonarqube-scan.sh --stop
 
-# 3. Change default password (first time only)
-curl -u admin:admin -X POST "http://localhost:9000/api/users/change_password?login=admin&previousPassword=admin&password=newadmin123"
-
-# 4. Generate scanner token (first time only)
-curl -u admin:newadmin123 -X POST "http://localhost:9000/api/user_tokens/generate?name=scanner-token"
-# Save the token from response
-
-# 5. Create project (first time only)
-curl -u admin:newadmin123 -X POST "http://localhost:9000/api/projects/create?project=cdn-website&name=CDN+Website"
-
-# 6. Run analysis (use token from step 4)
-docker run --rm \
-  -e SONAR_HOST_URL="http://host.docker.internal:9000" \
-  -e SONAR_TOKEN="your-token-here" \
-  -v "$(pwd):/usr/src" \
-  sonarsource/sonar-scanner-cli \
-  -Dsonar.projectKey=cdn-website
-
-# 7. View results at http://localhost:9000/dashboard?id=cdn-website
-
-# 8. Stop SonarQube when done
-docker stop sonarqube && docker rm sonarqube
+# View results at http://localhost:9000/dashboard?id=cdn-website
 ```
+
+The script automatically handles:
+- Starting SonarQube container (or using existing one)
+- Waiting for SonarQube to be ready
+- Setting up authentication and project
+- Running the analysis
+- Caching tokens for future runs
 
 ### Complete build and deployment workflow
 ```bash
@@ -179,16 +201,23 @@ npm run check
 hadolint Dockerfile
 trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL .
 
-# 2. Check for code smells (optional but recommended)
-# Follow steps above to run SonarQube scan
+# 2. Run Selenium E2E tests (MANDATORY)
+docker compose up --build -d
+npm test
+# All 20 tests must pass before proceeding
 
-# 3. Build the site
+# 3. Run SonarQube analysis (MANDATORY)
+# Follow steps in "Check for code smells with SonarQube" section
+# No new code smells, bugs, or vulnerabilities allowed
+
+# 4. Build the site (only after all tests pass)
 npm run build
+docker compose down
 
-# 4. Deploy to S3
+# 5. Deploy to S3
 aws s3 sync build/ s3://cdn.aztek.io --delete --acl public-read --profile aztek-org
 
-# 5. Invalidate CloudFront cache
+# 6. Invalidate CloudFront cache
 aws cloudfront create-invalidation --distribution-id E6X0JGRX63W96 --paths "/*" --profile aztek-org
 ```
 
