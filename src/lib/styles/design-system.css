@@ -10,6 +10,15 @@
   --color-secondary: #10b981;
   --color-secondary-hover: #059669;
   --color-secondary-light: #34d399;
+  --color-secondary-bg: #ecfdf5;
+  --color-secondary-bg-hover: #d1fae5;
+
+  /* Animation Colors (for canvas/decorative elements) */
+  --color-anim-blue: #3b82f6;
+  --color-anim-yellow: #f59e0b;
+  --color-anim-green: #10b981;
+  --color-anim-pink: #ec4899;
+  --color-anim-purple: #8b5cf6;
 
   /* Text Colors */
   --color-text-primary: #1e293b;
@@ -109,6 +118,8 @@
   --color-secondary: #10b981;
   --color-secondary-hover: #059669;
   --color-secondary-light: #34d399;
+  --color-secondary-bg: #064e3b;
+  --color-secondary-bg-hover: #065f46;
 
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #cbd5e1;

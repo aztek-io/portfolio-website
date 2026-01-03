@@ -19,6 +19,7 @@ import { externalLinksTests } from './external-links.test';
 import { footerTests } from './footer.test';
 import { certificationsTests } from './certifications.test';
 import { errorPageTests } from './error-page.test';
+import { errorDemoTests } from './error-demo.test';
 
 const results: TestResult[] = [];
 
@@ -30,7 +31,8 @@ const allSuites = [
   externalLinksTests,
   footerTests,
   certificationsTests,
-  errorPageTests
+  errorPageTests,
+  errorDemoTests
 ];
 
 async function runTests(): Promise<void> {

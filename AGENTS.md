@@ -63,7 +63,12 @@ This is a SvelteKit 5 static portfolio site deployed to AWS S3 + CloudFront at `
 
 ### Social Media Icons
 - Located in `src/lib/assets/` as `.svg` files
-- Icons use hardcoded fill color `#cbd5e1` matching `--color-footer-text-muted`
+- **SVG Format Standard**: All icons must use consistent attributes:
+  - `width="48" height="48"` - Use 48x48 for scalability
+  - `viewBox="0 0 24 24"` - Standard 24x24 viewBox
+  - `fill="#cbd5e1"` - Matches `--color-footer-text-muted`
+  - `xmlns="http://www.w3.org/2000/svg"` - Always include namespace
+- Example: `<svg width="48" height="48" viewBox="0 0 24 24" fill="#cbd5e1" xmlns="http://www.w3.org/2000/svg">`
 - If brand colors change, update both:
   - `--color-footer-text-muted` in `src/lib/styles/design-system.css`
   - `fill` attribute in all `src/lib/assets/*.svg` icon files
@@ -123,6 +128,32 @@ Visit http://localhost:8080 to test the site.
 ## Security Requirements
 
 **MANDATORY: Security scans MUST be run after every Docker build and after implementing any new feature.**
+
+### Todo List Requirement for SDLC Checks
+
+**AI agents MUST create and maintain a todo list when performing SDLC checks.** This mitigates the risk of forgetting steps during complex multi-step workflows.
+
+Before starting SDLC checks, create a todo list with all required items:
+
+| ID | Task | Status |
+|----|------|--------|
+| 1 | npm audit and fix | not-started |
+| 2 | npm run lint | not-started |
+| 3 | npm run check | not-started |
+| 4 | shellcheck scripts | not-started |
+| 5 | hadolint Dockerfile | not-started |
+| 6 | trivy fs scan | not-started |
+| 7 | Run E2E tests (npm test) | not-started |
+| 8 | docker build image | not-started |
+| 9 | trivy image scan | not-started |
+| 10 | SonarQube analysis | not-started |
+
+**Rules:**
+- Mark each item `in-progress` before starting
+- Mark each item `completed` immediately after finishing
+- Only one item should be `in-progress` at a time
+- Do NOT skip any items - all checks are mandatory
+- If a check fails, stop and fix before proceeding
 
 ### Run security and quality scans
 ```bash

@@ -9,6 +9,14 @@
   import githubIcon from '$lib/assets/github.svg';
   import youtubeIcon from '$lib/assets/youtube.svg';
   import stackoverflowIcon from '$lib/assets/stackoverflow.svg';
+  import emailIcon from '$lib/assets/email.svg';
+
+  // Obfuscated email to deter bots
+  const emailUser = 'robert';
+  const emailDomain = 'aztek.io';
+  function getEmailHref(): string {
+    return `mailto:${emailUser}@${emailDomain}`;
+  }
 
   // Root layout: shared header/footer
   let { children } = $props();
@@ -45,6 +53,30 @@
     };
   });
 </script>
+
+<svelte:head>
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Robert Jackson II - Sr. DevOps Solutions Architect & SRE Manager">
+  <meta name="description" content="Sr. DevOps Solutions Architect and Site Reliability Engineering Manager with expertise in Kubernetes, AWS, Terraform, and AI/ML integrations. CKA certified with 6 AWS certifications including Solutions Architect Professional and DevOps Engineer Professional.">
+  <meta name="author" content="Robert Jackson II">
+  <meta name="keywords" content="Robert Jackson, Robert Jackson II, DevOps Engineer, Site Reliability Engineer, SRE Manager, DevOps Solutions Architect, Kubernetes Administrator, CKA, AWS Certified, Solutions Architect Professional, DevOps Engineer Professional, Terraform, Helm, Ansible, Docker, Python, CI/CD, Jenkins, GitHub Actions, GitLab CI, Infrastructure as Code, IaC, SOC2, Cloud Engineer, AWS Bedrock, AI Agent, BackBox, PDI Technologies, Koupon, Dell, Alkami, ARMOR">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cdn.aztek.io/">
+  <meta property="og:title" content="Robert Jackson II - Sr. DevOps Solutions Architect & SRE Manager">
+  <meta property="og:description" content="Sr. DevOps Solutions Architect with expertise in Kubernetes, AWS, Terraform, AI/ML, and team leadership. CKA certified with 6 AWS certifications.">
+  <meta property="og:site_name" content="Robert Jackson II Portfolio">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary">
+  <meta property="twitter:url" content="https://cdn.aztek.io/">
+  <meta property="twitter:title" content="Robert Jackson II - Sr. DevOps Solutions Architect & SRE Manager">
+  <meta property="twitter:description" content="Sr. DevOps Solutions Architect with expertise in Kubernetes, AWS, Terraform, AI/ML, and team leadership. CKA certified with 6 AWS certifications.">
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://cdn.aztek.io/">
+</svelte:head>
 
 <header class="site-header">
   <div class="container">
@@ -85,6 +117,7 @@
       <a href="/" onclick={closeMobileMenu}>Home</a>
       <a href="/about" onclick={closeMobileMenu}>About</a>
       <a href="/certs" onclick={closeMobileMenu}>Certifications</a>
+      <a href="/error-demo" onclick={closeMobileMenu}>Error Demo</a>
       <a href="/Resume.pdf" class="external-link" onclick={closeMobileMenu} target="_blank" rel="noopener noreferrer">Resume</a>
     </nav>
   </div>
@@ -109,12 +142,16 @@
           <li><a href="/">Home</a></li>
           <li><a href="/about">About</a></li>
           <li><a href="/certs">Certifications</a></li>
+          <li><a href="/error-demo">Error Demo</a></li>
           <li><a href="/Resume.pdf" class="external-link" target="_blank" rel="noopener noreferrer">Resume</a></li>
         </ul>
       </div>
       <div class="footer-section">
         <h3>Connect</h3>
         <div class="social-links">
+          <a href={getEmailHref()} aria-label="Email" class="email-link">
+            <img src={emailIcon} alt="Email" width="20" height="20" />
+          </a>
           <a href="https://www.linkedin.com/in/robert-jackson-ii/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
             <img src={linkedinIcon} alt="LinkedIn" width="20" height="20" />
           </a>

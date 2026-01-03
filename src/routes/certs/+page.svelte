@@ -66,7 +66,7 @@
   }
 
   .view-cert:hover {
-    background-color: #ecfdf5;
+    background-color: var(--color-secondary-bg);
     color: var(--color-secondary-hover);
     transform: scale(1.05);
   }
@@ -86,11 +86,5 @@
 
   .view-cert svg {
     flex-shrink: 0;
-  }
-
-  /* Dark mode adjustments for certificate-specific colors */
-  :global(.dark .view-cert:hover) {
-    background-color: #064e3b;
-    color: var(--color-secondary-light);
   }
 </style>

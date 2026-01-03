@@ -1,3 +1,4 @@
-# allow crawling everything by default
 User-agent: *
-Disallow: /.secrets.env
+Allow: /
+
+Sitemap: https://cdn.aztek.io/sitemap.xml

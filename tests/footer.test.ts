@@ -24,25 +24,32 @@ async function testFooterSocialLinks(driver: WebDriver): Promise<void> {
 
   const socialLinks = await driver.findElements(By.css('.social-links a'));
 
-  if (socialLinks.length !== 4) {
-    throw new Error(`Expected 4 social links, found ${socialLinks.length}`);
+  if (socialLinks.length !== 5) {
+    throw new Error(`Expected 5 social links (including email), found ${socialLinks.length}`);
   }
 
-  // Verify all social links open in new tab
+  // Verify external social links open in new tab (skip email link)
   for (const link of socialLinks) {
-    const target = await link.getAttribute('target');
-    const rel = await link.getAttribute('rel');
+    const href = await link.getAttribute('href');
     const ariaLabel = await link.getAttribute('aria-label');
 
-    if (target !== '_blank') {
-      const href = await link.getAttribute('href');
-      throw new Error(`Social link ${href} should open in new tab`);
-    }
-    if (!rel.includes('noopener')) {
-      throw new Error('Social links should have noopener');
-    }
     if (!ariaLabel) {
       throw new Error('Social links should have aria-label');
+    }
+
+    // Email link uses mailto: and doesn't need target/rel
+    if (href.startsWith('mailto:')) {
+      continue;
+    }
+
+    const target = await link.getAttribute('target');
+    const rel = await link.getAttribute('rel');
+
+    if (target !== '_blank') {
+      throw new Error(`Social link ${href} should open in new tab`);
+    }
+    if (!rel || !rel.includes('noopener')) {
+      throw new Error('Social links should have noopener');
     }
   }
 }
@@ -53,8 +60,8 @@ async function testFooterQuickLinks(driver: WebDriver): Promise<void> {
 
   const quickLinks = await driver.findElements(By.css('.footer-section ul li a'));
 
-  if (quickLinks.length < 3) {
-    throw new Error(`Expected at least 3 quick links, found ${quickLinks.length}`);
+  if (quickLinks.length < 4) {
+    throw new Error(`Expected at least 4 quick links, found ${quickLinks.length}`);
   }
 
   // Verify expected links exist
@@ -63,7 +70,7 @@ async function testFooterQuickLinks(driver: WebDriver): Promise<void> {
     hrefs.push(await link.getAttribute('href'));
   }
 
-  const expectedPaths = ['/', '/about', '/certs'];
+  const expectedPaths = ['/', '/about', '/certs', '/error-demo'];
   for (const path of expectedPaths) {
     const found = hrefs.some(href => href.endsWith(path) || href.endsWith(path + '/'));
     if (!found) {
