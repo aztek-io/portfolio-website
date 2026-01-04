@@ -21,7 +21,7 @@ import { footerTests } from './footer.test';
 import { certificationsTests } from './certifications.test';
 import { errorPageTests } from './error-page.test';
 import { errorDemoTests } from './error-demo.test';
-import { cicdTests } from './cicd.test';
+import { mermaidTests } from './mermaid.test';
 
 const results: TestResult[] = [];
 
@@ -35,7 +35,7 @@ const allSuites = [
   certificationsTests,
   errorPageTests,
   errorDemoTests,
-  cicdTests
+  mermaidTests
 ];
 
 // Browsers to test

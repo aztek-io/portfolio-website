@@ -1,6 +1,6 @@
 /**
- * CI/CD Page Tests
- * Tests for the CI/CD philosophy page and Mermaid diagram rendering
+ * Mermaid Diagram Tests
+ * Tests for Mermaid diagram rendering on the CI/CD philosophy page
  */
 
 import type { WebDriver, TestSuite } from './utils';
@@ -107,8 +107,8 @@ async function testPrinciplesSectionExists(driver: WebDriver): Promise<void> {
 	}
 }
 
-export const cicdTests: TestSuite = {
-	name: 'CI/CD Page',
+export const mermaidTests: TestSuite = {
+	name: 'Mermaid Diagrams',
 	tests: [
 		{ name: 'CI/CD page loads', fn: testCicdPageLoads },
 		{ name: 'Mermaid diagrams render as SVG', fn: testMermaidDiagramsRender },
