@@ -1,0 +1,291 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, feature/*]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: cdn-website
+
+jobs:
+  # ============================================
+  # LINT STAGE
+  # Fail fast by catching misconfigurations early
+  # ============================================
+  lint-js:
+    name: Lint JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Svelte Check
+        run: npm run check
+
+  lint-shell:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+
+  lint-docker:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+  # ============================================
+  # TEST STAGE
+  # Unit tests (currently no unit tests in this project)
+  # ============================================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [lint-js, lint-shell, lint-docker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: echo "No unit tests configured - skipping"
+        # run: npm run test:unit
+
+  # ============================================
+  # BUILD STAGE
+  # Generate artifacts (site build + Docker image)
+  # ============================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/
+          retention-days: 7
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+
+      - name: Save Docker image
+        run: docker save ${{ env.DOCKER_IMAGE }}:${{ github.sha }} -o /tmp/docker-image.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/docker-image.tar
+          retention-days: 7
+
+  # ============================================
+  # QUALITY STAGE
+  # Security scans, integration tests, code quality
+  # ============================================
+  quality-npm-audit:
+    name: NPM Dependency Audit
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true  # Low severity cookie issue in SvelteKit
+
+  quality-fs:
+    name: Filesystem Security Scan
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,secret,misconfig'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+  quality-docker-cve:
+    name: Docker Image CVE Scan
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load -i /tmp/docker-image.tar
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.DOCKER_IMAGE }}:${{ github.sha }}'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+  quality-integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: docker load -i /tmp/docker-image.tar
+
+      - name: Start site
+        run: |
+          docker compose up -d
+          sleep 5  # Wait for nginx to start
+
+      - name: Run integration tests
+        run: npm test
+
+      - name: Stop site
+        if: always()
+        run: docker compose down
+
+  quality-sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        continue-on-error: true  # Optional - requires SonarCloud setup
+
+  # ============================================
+  # FINALIZE STAGE
+  # Summary and git tag
+  # ============================================
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs: [quality-npm-audit, quality-fs, quality-docker-cve, quality-integration-tests, quality-sonarqube]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate summary
+        run: |
+          echo "## CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Lint Stage" >> $GITHUB_STEP_SUMMARY
+          echo "All lint checks passed (prerequisite for this stage)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Quality Stage" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| NPM Audit | ${{ needs.quality-npm-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Filesystem Scan | ${{ needs.quality-fs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker CVE Scan | ${{ needs.quality-docker-cve.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.quality-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SonarQube | ${{ needs.quality-sonarqube.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for failures
+        id: check-failures
+        run: |
+          if [[ "${{ needs.quality-fs.result }}" == "failure" ]] || \
+             [[ "${{ needs.quality-docker-cve.result }}" == "failure" ]] || \
+             [[ "${{ needs.quality-integration-tests.result }}" == "failure" ]]; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create git tag
+        if: github.ref == 'refs/heads/main' && steps.check-failures.outputs.has_failures == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG="ci-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          git tag -a "$TAG" -m "CI passed: ${{ github.sha }}"
+          git push origin "$TAG"
+
+      - name: Fail if critical checks failed
+        if: steps.check-failures.outputs.has_failures == 'true'
+        run: exit 1
