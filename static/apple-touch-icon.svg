@@ -2,6 +2,6 @@
   <!-- Background with rounded corners for iOS -->
   <rect x="0" y="0" width="180" height="180" rx="32" ry="32" fill="#60a5fa"/>
 
-  <!-- "hi" text -->
-  <text x="90" y="115" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="white">hi</text>
+  <!-- "hi" text - Font stack: Comic Sans (Windows), Chalkboard SE (iOS), Marker Felt (iOS fallback) -->
+  <text x="90" y="115" font-family="'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive" font-size="80" font-weight="bold" text-anchor="middle" fill="white">hi</text>
 </svg>

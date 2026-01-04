@@ -6,6 +6,11 @@
 # Usage: bash scripts/sonarqube-scan.sh [--stop]
 #   --stop    Stop and remove SonarQube container after scan
 #
+# Behavior:
+#   - Auto-stops SonarQube if scan passes (0 bugs, 0 vulnerabilities, 0 code smells)
+#   - Keeps SonarQube running if issues are found (for dashboard review)
+#   - Use --stop flag to force stop regardless of results
+#
 
 set -euo pipefail
 
@@ -23,10 +28,13 @@ SONAR_PASSWORD="newadmin123"
 TOKEN_NAME="scanner-token"
 MAX_WAIT_SECONDS=180
 
-# Check if we should stop SonarQube after scan
-STOP_AFTER_SCAN=false
+# Track scan results for auto-stop decision
+SCAN_PASSED=false
+
+# Check if we should force stop SonarQube after scan
+FORCE_STOP=false
 if [[ "${1:-}" == "--stop" ]]; then
-    STOP_AFTER_SCAN=true
+    FORCE_STOP=true
 fi
 
 # Start or ensure SonarQube is running
@@ -34,7 +42,8 @@ start_sonarqube() {
     log INFO "Checking SonarQube container..."
 
     if docker ps -q -f name="^${CONTAINER_NAME}$" | grep -q .; then
-        log INFO "SonarQube is already running"
+        log WARN "SonarQube is already running"
+        log INFO "Using existing container for scan"
     elif docker ps -aq -f name="^${CONTAINER_NAME}$" | grep -q .; then
         log INFO "Starting existing SonarQube container..."
         docker start "${CONTAINER_NAME}"
@@ -143,21 +152,78 @@ run_scan() {
     log SUCCESS "Analysis complete!"
 }
 
-# Show results URL
-show_results() {
+# Wait for analysis to be processed and fetch results
+fetch_results() {
+    log INFO "Waiting for analysis to be processed..."
+    sleep 3  # Give SonarQube time to process the report
+
+    # Fetch metrics
+    local response
+    response=$(curl -s -u "admin:${SONAR_PASSWORD}" \
+        "${SONAR_URL}/api/measures/component?component=${PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells")
+
+    # Parse metrics
+    local bugs vulnerabilities code_smells
+    bugs=$(echo "${response}" | grep -o '"metric":"bugs","value":"[^"]*"' | grep -o '"value":"[^"]*"' | cut -d'"' -f4 || echo "0")
+    vulnerabilities=$(echo "${response}" | grep -o '"metric":"vulnerabilities","value":"[^"]*"' | grep -o '"value":"[^"]*"' | cut -d'"' -f4 || echo "0")
+    code_smells=$(echo "${response}" | grep -o '"metric":"code_smells","value":"[^"]*"' | grep -o '"value":"[^"]*"' | cut -d'"' -f4 || echo "0")
+
+    # Display results
     echo ""
-    log SUCCESS "View results at: ${SONAR_URL}/dashboard?id=${PROJECT_KEY}"
+    echo "=========================================="
+    echo "  SonarQube Analysis Results"
+    echo "=========================================="
     echo ""
+
+    if [[ "${bugs}" == "0" ]]; then
+        log SUCCESS "Bugs: ${bugs}"
+    else
+        log ERROR "Bugs: ${bugs}"
+    fi
+
+    if [[ "${vulnerabilities}" == "0" ]]; then
+        log SUCCESS "Vulnerabilities: ${vulnerabilities}"
+    else
+        log ERROR "Vulnerabilities: ${vulnerabilities}"
+    fi
+
+    if [[ "${code_smells}" == "0" ]]; then
+        log SUCCESS "Code Smells: ${code_smells}"
+    else
+        log WARN "Code Smells: ${code_smells}"
+    fi
+
+    echo ""
+
+    # Set SCAN_PASSED if all metrics are 0
+    if [[ "${bugs}" == "0" && "${vulnerabilities}" == "0" && "${code_smells}" == "0" ]]; then
+        SCAN_PASSED=true
+        log SUCCESS "All quality gates passed!"
+    else
+        SCAN_PASSED=false
+        log WARN "Quality issues detected - review dashboard for details"
+    fi
 }
 
-# Stop SonarQube if requested
+# Show results URL
+show_results() {
+    log INFO "Dashboard: ${SONAR_URL}/dashboard?id=${PROJECT_KEY}"
+}
+
+# Stop SonarQube based on scan results or force flag
 stop_sonarqube() {
-    if [[ "${STOP_AFTER_SCAN}" == "true" ]]; then
-        log INFO "Stopping SonarQube..."
+    # Auto-stop if scan passed OR force stop requested
+    if [[ "${FORCE_STOP}" == "true" ]]; then
+        log INFO "Force stopping SonarQube (--stop flag)..."
+        docker stop "${CONTAINER_NAME}" && docker rm "${CONTAINER_NAME}"
+        log SUCCESS "SonarQube stopped and removed"
+    elif [[ "${SCAN_PASSED}" == "true" ]]; then
+        log INFO "Scan passed - auto-stopping SonarQube..."
         docker stop "${CONTAINER_NAME}" && docker rm "${CONTAINER_NAME}"
         log SUCCESS "SonarQube stopped and removed"
     else
-        log INFO "SonarQube is still running. Stop with: docker stop ${CONTAINER_NAME} && docker rm ${CONTAINER_NAME}"
+        log WARN "Issues detected - keeping SonarQube running for review"
+        log INFO "Stop manually with: docker stop ${CONTAINER_NAME} && docker rm ${CONTAINER_NAME}"
     fi
 }
 
@@ -175,6 +241,7 @@ main() {
     get_scanner_token
     create_project
     run_scan
+    fetch_results
     show_results
     stop_sonarqube
 }

@@ -27,7 +27,7 @@
   // ─────────────────────────────────────────────────────────────
 
   let { children } = $props();
-  let darkMode = $state(true);
+  let darkMode = $state(false);
   let mobileMenuOpen = $state(false);
 
   // ─────────────────────────────────────────────────────────────
@@ -91,7 +91,10 @@
   <div class="container">
     <div class="header-content">
       <div class="logo">
-        <a href="/" onclick={closeMobileMenu}>Portfolio</a>
+        <a href="/" onclick={closeMobileMenu}>
+          <img src="/favicon.svg" alt="" width="28" height="28" class="logo-icon" />
+          Portfolio
+        </a>
       </div>
 
       <div class="header-actions">

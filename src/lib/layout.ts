@@ -65,14 +65,14 @@ export function createMobileMenuHandlers(
  */
 export function initDarkMode(): boolean {
   if (typeof localStorage === 'undefined') {
-    return true; // Default to dark mode if localStorage unavailable
+    return false; // Default to light mode if localStorage unavailable
   }
 
   const stored = localStorage.getItem('darkMode');
-  if (stored === 'false') {
-    return false;
+  if (stored === 'true') {
+    return true;
   }
-  return true; // Default to dark mode
+  return false; // Default to light mode
 }
 
 /**
