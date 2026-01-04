@@ -35,5 +35,8 @@
 		"typescript": "^5.0.0",
 		"vite": "^7.0.4",
 		"winston": "^3.19.0"
+	},
+	"dependencies": {
+		"mermaid": "^11.12.2"
 	}
 }

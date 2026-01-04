@@ -427,6 +427,12 @@ a:hover {
   color: var(--color-text-primary);
 }
 
+/* Hero subtitle styling */
+.hero h2 {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
 .markdown-content h2 {
   color: var(--color-text-primary);
   margin-top: var(--spacing-2xl);
@@ -448,6 +454,14 @@ a:hover {
 .markdown-content strong {
   color: var(--color-text-primary);
   font-weight: 600;
+}
+
+/* Strong inside headings should inherit the heading color */
+.markdown-content h1 strong,
+.markdown-content h2 strong,
+.markdown-content h3 strong,
+.markdown-content h4 strong {
+  color: inherit;
 }
 
 .markdown-content ul {

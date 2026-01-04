@@ -92,5 +92,9 @@ export const log = {
 
   fatalError: (err: Error | string) => {
     logger.error(`Test runner failed: ${err}`);
+  },
+
+  info: (message: string) => {
+    logger.info(message);
   }
 };
