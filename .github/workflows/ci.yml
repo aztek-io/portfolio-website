@@ -210,6 +210,9 @@ jobs:
       - name: Load Docker image
         run: docker load -i /tmp/docker-image.tar
 
+      - name: Tag image for compose
+        run: docker tag ${{ env.DOCKER_IMAGE }}:${{ github.sha }} cdn-website-web:latest
+
       - name: Start site
         run: |
           docker compose up -d
@@ -222,10 +225,13 @@ jobs:
         if: always()
         run: docker compose down
 
+  # SonarQube analysis is optional - requires SONAR_TOKEN and SONAR_HOST_URL secrets
+  # Skip if secrets are not configured
   quality-sonarqube:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
     needs: [build]
+    if: ${{ vars.ENABLE_SONARQUBE == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -236,7 +242,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        continue-on-error: true  # Optional - requires SonarCloud setup
 
   # ============================================
   # FINALIZE STAGE
@@ -245,7 +250,7 @@ jobs:
   finalize:
     name: Finalize
     runs-on: ubuntu-latest
-    needs: [quality-npm-audit, quality-fs, quality-docker-cve, quality-integration-tests, quality-sonarqube]
+    needs: [quality-npm-audit, quality-fs, quality-docker-cve, quality-integration-tests]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -264,7 +269,6 @@ jobs:
           echo "| Filesystem Scan | ${{ needs.quality-fs.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker CVE Scan | ${{ needs.quality-docker-cve.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration Tests | ${{ needs.quality-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SonarQube | ${{ needs.quality-sonarqube.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Check for failures
         id: check-failures
