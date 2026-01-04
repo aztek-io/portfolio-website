@@ -13,7 +13,7 @@ export interface NavLink {
 export const navLinks: NavLink[] = [
 	{ label: 'Home', url: '/' },
 	{ label: 'About', url: '/about' },
+	{ label: 'CI/CD', url: '/cicd' },
 	{ label: 'Certifications', url: '/certs' },
-	{ label: 'Error Demo', url: '/error-demo' },
 	{ label: 'Resume', url: '/Resume.pdf', external: true }
 ];

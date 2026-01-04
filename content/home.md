@@ -2,7 +2,7 @@
 
 # Robert Jackson
 
-## **Sr. DevOps Solutions Architect**
+## Sr. DevOps Solutions Architect
 
 10+ years of experience designing cloud infrastructure, leading SRE teams, and building scalable DevOps solutions. Passionate about Kubernetes, Infrastructure as Code, and helping teams ship faster with confidence.
 

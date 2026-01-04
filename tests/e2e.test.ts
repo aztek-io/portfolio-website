@@ -5,10 +5,11 @@
  * Prerequisites:
  * - Docker container running: docker compose up --build -d
  * - Site available at http://localhost:8080
+ * - Chrome and Firefox browsers installed
  */
 
 import { log } from './logger';
-import type { TestResult } from './utils';
+import type { TestResult, BrowserType } from './utils';
 import { runSuite } from './utils';
 
 // Import test suites
@@ -20,6 +21,7 @@ import { footerTests } from './footer.test';
 import { certificationsTests } from './certifications.test';
 import { errorPageTests } from './error-page.test';
 import { errorDemoTests } from './error-demo.test';
+import { cicdTests } from './cicd.test';
 
 const results: TestResult[] = [];
 
@@ -32,20 +34,39 @@ const allSuites = [
   footerTests,
   certificationsTests,
   errorPageTests,
-  errorDemoTests
+  errorDemoTests,
+  cicdTests
 ];
+
+// Browsers to test
+const browsers: BrowserType[] = ['chrome', 'firefox'];
 
 async function runTests(): Promise<void> {
   log.start();
 
-  // Run all test suites
-  for (const suite of allSuites) {
-    await runSuite(suite, results);
+  // Run all test suites for each browser
+  for (const browser of browsers) {
+    log.info(`\n${'='.repeat(50)}`);
+    log.info(`Running tests in ${browser.toUpperCase()}`);
+    log.info(`${'='.repeat(50)}\n`);
+
+    for (const suite of allSuites) {
+      await runSuite(suite, results, browser);
+    }
   }
 
   // Summary
   const passed = results.filter(r => r.passed).length;
   const failed = results.filter(r => !r.passed).length;
+
+  // Browser-specific summary
+  log.info('\n--- Browser Summary ---');
+  for (const browser of browsers) {
+    const browserResults = results.filter(r => r.browser === browser);
+    const browserPassed = browserResults.filter(r => r.passed).length;
+    const browserFailed = browserResults.filter(r => !r.passed).length;
+    log.info(`${browser}: ${browserPassed} passed, ${browserFailed} failed`);
+  }
 
   log.summary(passed, failed);
 

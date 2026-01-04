@@ -87,7 +87,7 @@ async function testFooterSourceCodeLink(driver: WebDriver): Promise<void> {
   const href = await sourceLink.getAttribute('href');
   const target = await sourceLink.getAttribute('target');
 
-  if (!href.includes('github.com/unacceptable/portfolio-website')) {
+  if (!href.includes('github.com/aztek-io/portfolio-website')) {
     throw new Error(`Source code link should point to GitHub repo, got: ${href}`);
   }
 
